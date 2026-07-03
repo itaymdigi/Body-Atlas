@@ -1,22 +1,31 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Reflexology and body awareness app API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: patients
+    description: Patient management
+  - name: pain-records
+    description: Pain documentation
+  - name: treatments
+    description: Treatment plans
+  - name: sessions
+    description: Treatment sessions
+  - name: dashboard
+    description: Dashboard stats
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +33,283 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /patients:
+    get:
+      operationId: listPatients
+      tags: [patients]
+      summary: List all patients
+      responses:
+        "200":
+          description: List of patients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Patient"
+    post:
+      operationId: createPatient
+      tags: [patients]
+      summary: Create a patient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+
+  /patients/{id}:
+    get:
+      operationId: getPatient
+      tags: [patients]
+      summary: Get patient by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Patient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+    patch:
+      operationId: updatePatient
+      tags: [patients]
+      summary: Update a patient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientUpdate"
+      responses:
+        "200":
+          description: Updated patient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+
+  /pain-records:
+    get:
+      operationId: listPainRecords
+      tags: [pain-records]
+      summary: List pain records
+      parameters:
+        - name: patientId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of pain records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PainRecord"
+    post:
+      operationId: createPainRecord
+      tags: [pain-records]
+      summary: Create a pain record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PainRecordInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PainRecord"
+
+  /pain-records/{id}:
+    get:
+      operationId: getPainRecord
+      tags: [pain-records]
+      summary: Get pain record by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pain record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PainRecord"
+
+  /treatments:
+    get:
+      operationId: listTreatments
+      tags: [treatments]
+      summary: List treatment plans
+      parameters:
+        - name: patientId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of treatment plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Treatment"
+    post:
+      operationId: createTreatment
+      tags: [treatments]
+      summary: Create a treatment plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TreatmentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Treatment"
+
+  /treatments/{id}:
+    get:
+      operationId: getTreatment
+      tags: [treatments]
+      summary: Get treatment by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Treatment plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Treatment"
+
+  /sessions:
+    get:
+      operationId: listSessions
+      tags: [sessions]
+      summary: List sessions
+      parameters:
+        - name: patientId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Session"
+    post:
+      operationId: createSession
+      tags: [sessions]
+      summary: Create a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Get recent activity feed
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
+  /dashboard/pain-trends:
+    get:
+      operationId: getPainTrends
+      tags: [dashboard]
+      summary: Get pain trend data for charts
+      parameters:
+        - name: patientId
+          in: query
+          schema:
+            type: integer
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month, year]
+      responses:
+        "200":
+          description: Pain trend data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PainTrendPoint"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +320,243 @@ components:
       required:
         - status
 
+    Patient:
+      type: object
+      required: [id, name, age, treatmentCount, avgPainScore, improvementPct, lastTreatmentDate]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        age:
+          type: integer
+        phone:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        treatmentCount:
+          type: integer
+        avgPainScore:
+          type: number
+        improvementPct:
+          type: number
+        lastTreatmentDate:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    PatientInput:
+      type: object
+      required: [name, age]
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+        phone:
+          type: string
+        notes:
+          type: string
+
+    PatientUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+        phone:
+          type: string
+        notes:
+          type: string
+
+    PainRecord:
+      type: object
+      required: [id, patientId, date, bodyArea, side, painIntensity, sensitivityLevel, pressureDepth, painType]
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        date:
+          type: string
+        bodyArea:
+          type: string
+        side:
+          type: string
+        painIntensity:
+          type: integer
+        sensitivityLevel:
+          type: string
+        pressureDepth:
+          type: string
+        painType:
+          type: string
+        notes:
+          type: ["string", "null"]
+        recommendation:
+          type: ["string", "null"]
+        followUpDate:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    PainRecordInput:
+      type: object
+      required: [patientId, date, bodyArea, side, painIntensity, sensitivityLevel, pressureDepth, painType]
+      properties:
+        patientId:
+          type: integer
+        date:
+          type: string
+        bodyArea:
+          type: string
+        side:
+          type: string
+        painIntensity:
+          type: integer
+        sensitivityLevel:
+          type: string
+        pressureDepth:
+          type: string
+        painType:
+          type: string
+        notes:
+          type: string
+        recommendation:
+          type: string
+        followUpDate:
+          type: string
+
+    Treatment:
+      type: object
+      required: [id, patientId, reflexologyZones, elementFocus, goals, sessionDurationMin, frequencyPerWeek]
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        reflexologyZones:
+          type: array
+          items:
+            type: string
+        elementFocus:
+          type: string
+        goals:
+          type: array
+          items:
+            type: string
+        sessionDurationMin:
+          type: integer
+        frequencyPerWeek:
+          type: integer
+        followUpSchedule:
+          type: ["string", "null"]
+        summary:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    TreatmentInput:
+      type: object
+      required: [patientId, reflexologyZones, elementFocus, goals, sessionDurationMin, frequencyPerWeek]
+      properties:
+        patientId:
+          type: integer
+        reflexologyZones:
+          type: array
+          items:
+            type: string
+        elementFocus:
+          type: string
+        goals:
+          type: array
+          items:
+            type: string
+        sessionDurationMin:
+          type: integer
+        frequencyPerWeek:
+          type: integer
+        followUpSchedule:
+          type: string
+        summary:
+          type: string
+
+    Session:
+      type: object
+      required: [id, patientId, date, durationMin, notes]
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        date:
+          type: string
+        durationMin:
+          type: integer
+        notes:
+          type: string
+        painBefore:
+          type: ["integer", "null"]
+        painAfter:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+
+    SessionInput:
+      type: object
+      required: [patientId, date, durationMin, notes]
+      properties:
+        patientId:
+          type: integer
+        date:
+          type: string
+        durationMin:
+          type: integer
+        notes:
+          type: string
+        painBefore:
+          type: integer
+        painAfter:
+          type: integer
+
+    DashboardStats:
+      type: object
+      required: [totalPatients, totalSessions, avgImprovementPct, activePatientsThisWeek, totalPainRecords]
+      properties:
+        totalPatients:
+          type: integer
+        totalSessions:
+          type: integer
+        avgImprovementPct:
+          type: number
+        activePatientsThisWeek:
+          type: integer
+        totalPainRecords:
+          type: integer
+
+    ActivityItem:
+      type: object
+      required: [id, type, patientName, description, timestamp]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        patientName:
+          type: string
+        description:
+          type: string
+        timestamp:
+          type: string
+
+    PainTrendPoint:
+      type: object
+      required: [date, avgPain, sessionCount]
+      properties:
+        date:
+          type: string
+        avgPain:
+          type: number
+        sessionCount:
+          type: integer
