@@ -77,6 +77,18 @@ export default defineConfig({
               cacheableResponse: { statuses: [0, 200] },
             },
           },
+          {
+            // 3D model assets (e.g. the foot/organs .glb) are large and only
+            // needed by the foot-model page, so they're cached on first use
+            // rather than bloated into the initial install precache.
+            urlPattern: ({ url }) => url.pathname.startsWith("/models/"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "model-assets",
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
         ],
       },
       devOptions: {
