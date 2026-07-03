@@ -1,449 +1,506 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ZoomIn, ZoomOut, RotateCcw, ChevronLeft } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 
-type Layer = "skin" | "muscle" | "nerve" | "organs" | "pain";
+type Layer = "organs" | "nerve" | "muscle" | "pain";
 type Foot = "right" | "left";
 
-const LAYERS: { id: Layer; label: string; color: string; bg: string }[] = [
-  { id: "skin", label: "עור", color: "#d97706", bg: "bg-amber-100 text-amber-700 border-amber-300" },
-  { id: "muscle", label: "שריר", color: "#e11d48", bg: "bg-rose-100 text-rose-700 border-rose-300" },
-  { id: "nerve", label: "עצבים", color: "#2563eb", bg: "bg-blue-100 text-blue-700 border-blue-300" },
-  { id: "organs", label: "איברים פנימיים", color: "#059669", bg: "bg-emerald-100 text-emerald-700 border-emerald-300" },
-  { id: "pain", label: "כאב", color: "#dc2626", bg: "bg-red-100 text-red-700 border-red-300" },
+const LAYERS: { id: Layer; label: string }[] = [
+  { id: "organs", label: "איברים פנימיים" },
+  { id: "nerve",  label: "עצבים" },
+  { id: "muscle", label: "שריר" },
+  { id: "pain",   label: "כאב" },
 ];
 
-interface Organ {
-  id: string;
-  name: string;
-  icon: string;
-  cx: number; cy: number; rx: number; ry: number;
-  fill: string; stroke: string;
-  labelSide: "left" | "right";
-  desc: string;
+interface ZoneData {
+  id: string; name: string; desc: string; element: string;
+  color: string; glow: string;
+  /** normalized 0-1 within foot height (0=toes, 1=heel) */
+  yPos: number;
+  /** -1 to 1 horizontal offset */
+  xOff: number;
+  /** depth layer 0-1 (0=surface, 1=deep) */
+  depth: number;
+  /** relative size 0.5-1.4 */
+  size: number;
 }
 
-const ORGANS: Organ[] = [
-  { id: "brain", name: "ראש/מוח", icon: "🧠", cx: 88, cy: 58, rx: 24, ry: 18, fill: "url(#gBrain)", stroke: "#7c3aed", labelSide: "left", desc: "מרכז חשיבה, תיאום ושינה. עבודה על האצבעות מרגיעה מתח עצבי ומיגרנות." },
-  { id: "sinus", name: "סינוסים", icon: "👃", cx: 140, cy: 52, rx: 16, ry: 13, fill: "url(#gSinus)", stroke: "#0891b2", labelSide: "right", desc: "חללי אוויר בגולגולת. מסייע לאלרגיות, הצטננות וכאבי פנים." },
-  { id: "eyes", name: "עיניים", icon: "👁", cx: 108, cy: 82, rx: 12, ry: 10, fill: "url(#gEyes)", stroke: "#0891b2", labelSide: "right", desc: "עייפות עינית, מתח ראייתי. בקצות אצבעות 2-3." },
-  { id: "lung", name: "ריאות", icon: "🫁", cx: 110, cy: 140, rx: 48, ry: 28, fill: "url(#gLung)", stroke: "#db2777", labelSide: "left", desc: "מערכת הנשימה. אסתמה, חרדה ונשימה רדודה. כדור כף הרגל." },
-  { id: "heart", name: "לב", icon: "❤️", cx: 76, cy: 155, rx: 16, ry: 16, fill: "url(#gHeart)", stroke: "#dc2626", labelSide: "left", desc: "משאבת הדם. לחץ דם, חיוניות וחיבור רגשי." },
-  { id: "diaphragm", name: "סרעפת", icon: "🫧", cx: 112, cy: 178, rx: 50, ry: 8, fill: "url(#gDiaphragm)", stroke: "#65a30d", labelSide: "right", desc: "שריר הנשימה. הרפייתו מאזנת את המערכת כולה." },
-  { id: "stomach", name: "קיבה", icon: "🟧", cx: 88, cy: 210, rx: 26, ry: 22, fill: "url(#gStomach)", stroke: "#d97706", labelSide: "left", desc: "עיכול מזון ורגשות. צרבת, כיבים ודאגנות יתר." },
-  { id: "liver", name: "כבד", icon: "🟤", cx: 142, cy: 205, rx: 28, ry: 22, fill: "url(#gLiver)", stroke: "#92400e", labelSide: "right", desc: "ניקוי רעלים וחילוף חומרים. ברפלקסולוגיה קשור לכעס ותסכול." },
-  { id: "pancreas", name: "לבלב", icon: "🩷", cx: 104, cy: 238, rx: 20, ry: 12, fill: "url(#gPancreas)", stroke: "#ec4899", labelSide: "left", desc: "ויסות סוכר וייצור אנזימים עיכוליים." },
-  { id: "kidney", name: "כליות", icon: "🫘", cx: 112, cy: 268, rx: 22, ry: 20, fill: "url(#gKidney)", stroke: "#7c3aed", labelSide: "right", desc: "ניקוי הדם. שורש אנרגיית החיים, פחדים עמוקים ומבנה." },
-  { id: "intestine", name: "מעיים", icon: "🌀", cx: 112, cy: 305, rx: 38, ry: 28, fill: "url(#gIntestine)", stroke: "#059669", labelSide: "left", desc: "ספיגת חומרים מזינים ופינוי. קשור לסדר ועיבוד רגשי." },
-  { id: "lowerback", name: "גב תחתון", icon: "🦴", cx: 90, cy: 345, rx: 24, ry: 16, fill: "url(#gLowerback)", stroke: "#1d4ed8", labelSide: "left", desc: "תמיכה יציבה. ביטחון קיומי, גמישות ועצמאות." },
-  { id: "pelvis", name: "אגן", icon: "🦷", cx: 112, cy: 375, rx: 32, ry: 18, fill: "url(#gPelvis)", stroke: "#0f766e", labelSide: "right", desc: "בסיס, יציבות ואברי רבייה. קרקוע ושייכות." },
-  { id: "heel", name: "עקב", icon: "👣", cx: 112, cy: 410, rx: 36, ry: 22, fill: "url(#gHeel)", stroke: "#64748b", labelSide: "left", desc: "בסיס עגן. כאב עקב קשור לחסר בתמיכה כלכלית או רגשית." },
+const ZONES: ZoneData[] = [
+  { id:"brain",     name:"ראש/מוח",   desc:"מרכז חשיבה, תיאום ושינה. עבודה על האצבעות מרגיעה מתח עצבי ומיגרנות.",      element:"אוויר", color:"#8b5cf6", glow:"#c4b5fd", yPos:0.04, xOff:0,    depth:0.3, size:1.0 },
+  { id:"sinus",     name:"סינוסים",   desc:"חללי אוויר בגולגולת. מסייע לאלרגיות, הצטננות וכאבי פנים.",                   element:"אוויר", color:"#0ea5e9", glow:"#bae6fd", yPos:0.08, xOff:0.35, depth:0.2, size:0.7 },
+  { id:"eyes",      name:"עיניים",    desc:"עייפות עינית, מתח ראייתי. בקצות אצבעות 2–3.",                                 element:"אש",    color:"#06b6d4", glow:"#a5f3fc", yPos:0.12, xOff:-0.3, depth:0.2, size:0.6 },
+  { id:"lung",      name:"ריאות",     desc:"מערכת הנשימה. אסתמה, חרדה ונשימה רדודה. כדור כף הרגל.",                      element:"אוויר", color:"#ec4899", glow:"#fbcfe8", yPos:0.23, xOff:0,    depth:0.4, size:1.3 },
+  { id:"heart",     name:"לב",        desc:"משאבת הדם. לחץ דם, חיוניות וחיבור רגשי.",                                     element:"אש",    color:"#ef4444", glow:"#fca5a5", yPos:0.25, xOff:-0.4, depth:0.3, size:0.8 },
+  { id:"diaphragm", name:"סרעפת",     desc:"שריר הנשימה. הרפייתו מאזנת את המערכת כולה.",                                  element:"אוויר", color:"#84cc16", glow:"#bef264", yPos:0.32, xOff:0,    depth:0.5, size:1.1 },
+  { id:"stomach",   name:"קיבה",      desc:"עיכול מזון ורגשות. צרבת, כיבים ודאגנות יתר.",                                 element:"אש",    color:"#f97316", glow:"#fed7aa", yPos:0.42, xOff:-0.2, depth:0.4, size:0.95},
+  { id:"liver",     name:"כבד",       desc:"ניקוי רעלים וחילוף חומרים. ברפלקסולוגיה קשור לכעס ותסכול.",                  element:"עץ",    color:"#a16207", glow:"#d4a166", yPos:0.43, xOff:0.35, depth:0.4, size:0.95},
+  { id:"pancreas",  name:"לבלב",      desc:"ויסות סוכר וייצור אנזימים עיכוליים.",                                          element:"אדמה", color:"#f43f5e", glow:"#fda4af", yPos:0.52, xOff:0,    depth:0.6, size:0.7 },
+  { id:"kidney",    name:"כליות",     desc:"ניקוי הדם. שורש אנרגיית החיים, פחדים עמוקים ומבנה.",                          element:"מים",  color:"#7c3aed", glow:"#ddd6fe", yPos:0.59, xOff:0,    depth:0.5, size:0.85},
+  { id:"intestine", name:"מעיים",     desc:"ספיגת חומרים מזינים ופינוי. קשור לסדר ועיבוד רגשי.",                          element:"אדמה", color:"#10b981", glow:"#a7f3d0", yPos:0.68, xOff:0,    depth:0.5, size:1.2 },
+  { id:"lowerback", name:"גב תחתון",  desc:"תמיכה יציבה. ביטחון קיומי, גמישות ועצמאות.",                                  element:"מים",  color:"#3b82f6", glow:"#bfdbfe", yPos:0.78, xOff:0,    depth:0.3, size:0.85},
+  { id:"pelvis",    name:"אגן",       desc:"בסיס, יציבות ואברי רבייה. קרקוע ושייכות.",                                    element:"אדמה", color:"#0f766e", glow:"#99f6e4", yPos:0.86, xOff:0,    depth:0.4, size:1.0 },
+  { id:"heel",      name:"עקב",       desc:"בסיס עגן. כאב עקב קשור לחסר בתמיכה כלכלית או רגשית.",                        element:"אדמה", color:"#64748b", glow:"#cbd5e1", yPos:0.95, xOff:0,    depth:0.2, size:1.1 },
 ];
 
-const PAIN_MARKERS = [
-  { cx: 88, cy: 58, r: 14, color: "#ef4444", label: "ראש", intensity: 7 },
-  { cx: 112, cy: 345, r: 16, color: "#f97316", label: "גב תחתון", intensity: 8 },
-  { cx: 112, cy: 140, r: 12, color: "#eab308", label: "ריאות", intensity: 4 },
-  { cx: 112, cy: 268, r: 10, color: "#f97316", label: "כליות", intensity: 5 },
-];
+// Nerve path node positions (normalized 0-1 along y)
+const NERVE_Y = [0.04, 0.12, 0.22, 0.33, 0.44, 0.56, 0.68, 0.80, 0.94];
 
-// Foot outline path for plantar (sole) view, right foot, in 240x460 viewBox
-const FOOT_PATH = "M 86,20 C 70,20 52,22 46,32 C 40,38 40,50 44,58 C 30,56 24,60 26,70 C 28,80 40,83 50,80 C 46,88 44,95 50,100 C 56,105 66,103 72,98 C 68,106 66,115 72,120 C 78,125 90,122 96,116 C 100,128 108,135 120,134 C 132,133 140,126 144,116 C 150,122 160,124 168,118 C 174,112 172,103 168,96 C 180,95 188,88 186,78 C 184,68 174,64 162,68 C 164,60 162,50 156,44 C 150,36 138,34 130,38 L 126,30 C 118,22 104,18 94,18 Z M 66,128 C 44,138 34,165 34,200 C 34,240 42,275 50,305 C 58,340 64,365 74,388 C 86,415 104,438 120,440 C 138,442 156,424 166,400 C 178,372 184,340 188,308 C 192,275 192,240 188,206 C 184,168 174,145 158,130 C 148,122 136,118 120,118 C 104,118 82,120 66,128 Z";
+// Foot outline path in 220×440 viewbox
+const FOOT_PATH = "M 110,18 C 90,16 68,22 58,36 C 50,46 50,60 54,70 C 40,68 32,74 34,84 C 36,96 52,100 62,96 C 56,106 54,118 60,124 C 66,130 80,128 86,120 C 88,134 96,142 110,142 C 124,142 132,134 134,120 C 140,128 154,130 160,124 C 166,118 164,106 158,96 C 168,100 184,96 186,84 C 188,74 180,68 166,70 C 170,60 170,46 162,36 C 152,22 130,16 110,18 Z M 72,138 C 52,150 40,178 38,216 C 36,258 44,298 54,334 C 66,374 80,408 96,430 C 104,442 118,448 126,448 C 138,446 152,436 162,416 C 176,390 186,356 192,316 C 198,278 198,240 192,202 C 186,162 172,144 154,134 C 142,126 128,122 112,122 C 96,122 82,128 72,138 Z";
+
+const FOOT_HEIGHT = 448;
+const FOOT_WIDTH  = 220;
 
 export default function FootModel() {
-  const [activeLayer, setActiveLayer] = useState<Layer>("organs");
-  const [activeFoot, setActiveFoot] = useState<Foot>("right");
-  const [selectedOrgan, setSelectedOrgan] = useState<Organ | null>(ORGANS[0]);
-  const [zoom, setZoom] = useState(1);
+  const [layer,        setLayer]        = useState<Layer>("organs");
+  const [foot,         setFoot]         = useState<Foot>("right");
+  const [selected,     setSelected]     = useState<ZoneData | null>(ZONES[0]);
+  const [rotY,         setRotY]         = useState(0);
+  const [rotX,         setRotX]         = useState(-8);
 
-  const activeLayerData = LAYERS.find(l => l.id === activeLayer)!;
+  const autoRef    = useRef<number | null>(null);
+  const dragging   = useRef(false);
+  const lastX      = useRef(0);
+  const lastY      = useRef(0);
+  const velX       = useRef(0);
+  const velY       = useRef(0);
+  const rotYRef    = useRef(rotY);
+  const rotXRef    = useRef(rotX);
 
-  const leftOrgans = ORGANS.filter(o => o.labelSide === "left");
-  const rightOrgans = ORGANS.filter(o => o.labelSide === "right");
+  // Keep refs in sync
+  useEffect(() => { rotYRef.current = rotY; }, [rotY]);
+  useEffect(() => { rotXRef.current = rotX; }, [rotX]);
+
+  // Auto-rotate
+  useEffect(() => {
+    let running = true;
+    let lastTs = performance.now();
+    const tick = (ts: number) => {
+      if (!running) return;
+      const dt = (ts - lastTs) / 1000;
+      lastTs = ts;
+      if (!dragging.current) {
+        setRotY(r => r + 36 * dt);  // 36°/s
+        // Decelerate velocity
+        velX.current *= 0.92;
+        velY.current *= 0.92;
+        setRotX(r => {
+          const target = r + velY.current;
+          return target > 25 ? 25 : target < -25 ? -25 : target;
+        });
+      }
+      autoRef.current = requestAnimationFrame(tick);
+    };
+    autoRef.current = requestAnimationFrame(tick);
+    return () => { running = false; if (autoRef.current) cancelAnimationFrame(autoRef.current); };
+  }, []);
+
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    dragging.current = true;
+    lastX.current = e.clientX;
+    lastY.current = e.clientY;
+    velX.current = 0;
+    velY.current = 0;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragging.current) return;
+    const dx = e.clientX - lastX.current;
+    const dy = e.clientY - lastY.current;
+    velX.current = dx * 0.4;
+    velY.current = dy * 0.3;
+    setRotY(r => r + dx * 0.55);
+    setRotX(r => {
+      const n = r + dy * 0.35;
+      return n > 25 ? 25 : n < -25 ? -25 : n;
+    });
+    lastX.current = e.clientX;
+    lastY.current = e.clientY;
+  }, []);
+
+  const onPointerUp = useCallback(() => { dragging.current = false; }, []);
+
+  const reset = () => { setRotY(0); setRotX(-8); velX.current = 0; velY.current = 0; };
+
+  // Compute visible side: how much the front face is showing (cos of rotY)
+  const cosY = Math.cos((rotY * Math.PI) / 180);
+  const showingBack = cosY < 0;
+
+  // Project a zone's 3D position to 2D screen coords
+  function projectZone(z: ZoneData) {
+    const footCenterX = FOOT_WIDTH / 2;
+    const footCenterY = FOOT_HEIGHT * 0.5;
+
+    // base 2D position within foot
+    const baseX = footCenterX + z.xOff * 55;
+    const baseY = z.yPos * FOOT_HEIGHT;
+    const offsetFromCenter = baseX - footCenterX;
+
+    // 3D depth offset — zones are inside the foot, depth pushes them in Z
+    const depthOffset = z.depth * 18; // px of "thickness"
+
+    // rotate around Y axis: cosY/sinY
+    const sinY = Math.sin((rotY * Math.PI) / 180);
+    const rotatedX = footCenterX + offsetFromCenter * cosY - depthOffset * sinY;
+
+    // slight Y tilt
+    const sinX = Math.sin((rotX * Math.PI) / 180);
+    const dy = (baseY - footCenterY);
+    const rotatedY = footCenterY + dy * Math.cos((rotX * Math.PI) / 180) - depthOffset * sinX;
+
+    // scale by depth illusion
+    const scale = 1 - z.depth * 0.12;
+
+    // Z value for sorting (higher = closer to viewer)
+    const zVal = -depthOffset * cosY + offsetFromCenter * sinY;
+
+    return { x: rotatedX, y: rotatedY, scale, zVal, visible: true };
+  }
+
+  // Sort zones by depth
+  const sortedZones = [...ZONES].sort((a, b) => {
+    const pa = projectZone(a);
+    const pb = projectZone(b);
+    return pa.zVal - pb.zVal;
+  });
+
+  // Nerve path points
+  const nervePts = NERVE_Y.map((yN, i) => {
+    const sinY = Math.sin((rotY * Math.PI) / 180);
+    const sinX = Math.sin((rotX * Math.PI) / 180);
+    const footCenterX = FOOT_WIDTH / 2;
+    const footCenterY = FOOT_HEIGHT * 0.5;
+    const baseX = footCenterX;
+    const baseY = yN * FOOT_HEIGHT;
+    const dy = baseY - footCenterY;
+    const rotY2D = footCenterX + 0 * cosY;
+    const rotY2DY = footCenterY + dy * Math.cos((rotX * Math.PI) / 180);
+    return `${i === 0 ? "M" : "L"} ${rotY2D},${rotY2DY}`;
+  }).join(" ");
+
+  // Muscle stripe paths
+  const muscleY = [0.14, 0.25, 0.37, 0.50, 0.63, 0.75];
+  const musclePaths = muscleY.map(yN => {
+    const footCenterX = FOOT_WIDTH / 2;
+    const footCenterY = FOOT_HEIGHT * 0.5;
+    const baseY = yN * FOOT_HEIGHT;
+    const dy = baseY - footCenterY;
+    const rotatedY = footCenterY + dy * Math.cos((rotX * Math.PI) / 180);
+    const halfW = (55 + 12) * Math.abs(cosY);
+    return { x1: footCenterX - halfW, y: rotatedY, x2: footCenterX + halfW };
+  });
+
+  // Pain markers
+  const painZones = [ZONES[0], ZONES[9], ZONES[3], ZONES[11]];
+  const PAIN_INTENSITY = [7, 8, 4, 5];
+  const PAIN_COLOR = ["#ef4444", "#f97316", "#eab308", "#f97316"];
 
   return (
     <div className="flex flex-col h-full" data-testid="foot-model-page">
       {/* Header */}
-      <div className="pb-4 border-b border-border mb-4">
+      <div className="pb-4 border-b border-border mb-4 flex-shrink-0">
         <h1 className="text-2xl font-semibold text-foreground">מפת כף הרגל</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          {activeFoot === "right" ? "כף רגל ימין" : "כף רגל שמאל"} — איברים פנימיים
+          {foot === "right" ? "כף רגל ימין" : "כף רגל שמאל"} — גרור לסיבוב 360°
         </p>
       </div>
 
-      {/* Layer Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
-        {LAYERS.map(layer => (
-          <button
-            key={layer.id}
-            data-testid={`layer-tab-${layer.id}`}
-            onClick={() => setActiveLayer(layer.id)}
+      {/* Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-2 mb-4 flex-shrink-0 scrollbar-hide">
+        {LAYERS.map(l => (
+          <button key={l.id} onClick={() => setLayer(l.id)}
             className={`flex-shrink-0 px-4 py-2 rounded-full border text-sm font-medium transition-all ${
-              activeLayer === layer.id
-                ? layer.bg + " border-current shadow-sm"
+              layer === l.id
+                ? "bg-primary text-primary-foreground border-primary shadow-sm"
                 : "bg-card text-muted-foreground border-border hover:border-primary/40"
-            }`}
-          >
-            {layer.label}
-          </button>
+            }`}>{l.label}</button>
         ))}
       </div>
 
-      {/* Foot / Left toggle */}
-      <div className="flex gap-2 mb-4">
-        {(["right", "left"] as Foot[]).map(f => (
-          <button
-            key={f}
-            data-testid={`foot-toggle-${f}`}
-            onClick={() => setActiveFoot(f)}
-            className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium border transition-all ${
-              activeFoot === f
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-card text-muted-foreground border-border hover:border-primary/40"
-            }`}
-          >
-            <span>{f === "right" ? "ימין" : "שמאל"}</span>
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-              <ellipse cx="10" cy="10" rx="5" ry="9" />
-            </svg>
-          </button>
+      {/* Foot toggle */}
+      <div className="flex gap-2 mb-4 flex-shrink-0">
+        {(["right","left"] as Foot[]).map(f => (
+          <button key={f} onClick={() => setFoot(f)}
+            className={`px-5 py-2 rounded-full text-sm font-medium border transition-all ${
+              foot === f ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:border-primary/40"
+            }`}>{f === "right" ? "ימין" : "שמאל"}</button>
         ))}
       </div>
 
-      {/* Main visualization + sidebar */}
+      {/* Main layout */}
       <div className="flex gap-4 flex-1 min-h-0">
-        {/* Left label column */}
-        {activeLayer === "organs" && (
-          <div className="hidden lg:flex flex-col justify-start gap-1 w-32 shrink-0 pt-8">
-            {leftOrgans.map(organ => (
-              <button
-                key={organ.id}
-                onClick={() => setSelectedOrgan(organ)}
-                className={`text-right text-xs px-2 py-1.5 rounded-lg transition-colors ${
-                  selectedOrgan?.id === organ.id
-                    ? "bg-primary/10 text-primary font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {organ.name}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* 3D Foot Viewer */}
+        <div
+          className="flex-1 rounded-3xl overflow-hidden border border-border shadow-inner bg-gradient-to-b from-teal-50/60 via-white to-slate-50 relative select-none cursor-grab active:cursor-grabbing min-h-[420px]"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerLeave={onPointerUp}
+        >
+          {/* Reset button */}
+          <button onClick={reset}
+            className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-white/80 border border-border shadow flex items-center justify-center hover:bg-white transition-colors">
+            <RotateCcw className="w-4 h-4 text-muted-foreground" />
+          </button>
 
-        {/* Foot SVG */}
-        <div className="flex-1 flex flex-col items-center gap-3 relative">
-          {/* Zoom controls */}
-          <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
-            <Button size="icon" variant="secondary" className="w-8 h-8 rounded-full shadow-sm" onClick={() => setZoom(z => Math.min(z + 0.2, 2))}>
-              <ZoomIn className="w-4 h-4" />
-            </Button>
-            <Button size="icon" variant="secondary" className="w-8 h-8 rounded-full shadow-sm" onClick={() => setZoom(z => Math.max(z - 0.2, 0.5))}>
-              <ZoomOut className="w-4 h-4" />
-            </Button>
-            <Button size="icon" variant="secondary" className="w-8 h-8 rounded-full shadow-sm" onClick={() => setZoom(1)}>
-              <RotateCcw className="w-4 h-4" />
-            </Button>
-          </div>
-
-          <div className="flex-1 flex items-center justify-center overflow-hidden bg-gradient-to-b from-slate-50 to-white rounded-3xl border border-border shadow-inner w-full max-h-[520px]">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`${activeLayer}-${activeFoot}`}
-                initial={{ opacity: 0, scale: 0.94 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.04 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}
+          {/* 3D scene */}
+          <div className="w-full h-full flex items-center justify-center py-4">
+            <div
+              style={{
+                perspective: "900px",
+                perspectiveOrigin: "50% 45%",
+                width: FOOT_WIDTH,
+                height: FOOT_HEIGHT,
+                position: "relative",
+              }}
+            >
+              {/* The foot group that rotates */}
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  transform: `rotateY(${foot === "left" ? -rotY : rotY}deg) rotateX(${rotX}deg)`,
+                  transformStyle: "preserve-3d",
+                  transition: dragging.current ? "none" : "none",
+                  position: "relative",
+                }}
               >
+                {/* ── FRONT FACE: foot SVG ── */}
                 <svg
-                  viewBox="0 0 240 460"
-                  width="200"
-                  height="380"
-                  className="drop-shadow-xl"
-                  style={{ transform: activeFoot === "left" ? "scaleX(-1)" : "none" }}
+                  viewBox={`0 0 ${FOOT_WIDTH} ${FOOT_HEIGHT}`}
+                  width={FOOT_WIDTH}
+                  height={FOOT_HEIGHT}
+                  style={{
+                    position: "absolute", top: 0, left: 0,
+                    filter: "drop-shadow(0 12px 24px rgba(0,0,0,0.18))",
+                    backfaceVisibility: "hidden",
+                    WebkitBackfaceVisibility: "hidden",
+                  }}
                 >
                   <defs>
-                    {/* Gradients for organs */}
-                    <radialGradient id="gBrain" cx="40%" cy="35%"><stop offset="0%" stopColor="#c4b5fd"/><stop offset="100%" stopColor="#7c3aed"/></radialGradient>
-                    <radialGradient id="gSinus" cx="40%" cy="35%"><stop offset="0%" stopColor="#bae6fd"/><stop offset="100%" stopColor="#0284c7"/></radialGradient>
-                    <radialGradient id="gEyes" cx="40%" cy="35%"><stop offset="0%" stopColor="#a5f3fc"/><stop offset="100%" stopColor="#0891b2"/></radialGradient>
-                    <radialGradient id="gLung" cx="40%" cy="35%"><stop offset="0%" stopColor="#fbcfe8"/><stop offset="100%" stopColor="#db2777" stopOpacity="0.7"/></radialGradient>
-                    <radialGradient id="gHeart" cx="35%" cy="30%"><stop offset="0%" stopColor="#fca5a5"/><stop offset="100%" stopColor="#dc2626"/></radialGradient>
-                    <radialGradient id="gDiaphragm" cx="40%" cy="35%"><stop offset="0%" stopColor="#bef264"/><stop offset="100%" stopColor="#65a30d" stopOpacity="0.6"/></radialGradient>
-                    <radialGradient id="gStomach" cx="40%" cy="35%"><stop offset="0%" stopColor="#fed7aa"/><stop offset="100%" stopColor="#ea580c" stopOpacity="0.8"/></radialGradient>
-                    <radialGradient id="gLiver" cx="40%" cy="35%"><stop offset="0%" stopColor="#d6b4a0"/><stop offset="100%" stopColor="#92400e" stopOpacity="0.8"/></radialGradient>
-                    <radialGradient id="gPancreas" cx="40%" cy="35%"><stop offset="0%" stopColor="#fde68a"/><stop offset="100%" stopColor="#d97706" stopOpacity="0.8"/></radialGradient>
-                    <radialGradient id="gKidney" cx="40%" cy="35%"><stop offset="0%" stopColor="#ddd6fe"/><stop offset="100%" stopColor="#7c3aed" stopOpacity="0.8"/></radialGradient>
-                    <radialGradient id="gIntestine" cx="40%" cy="35%"><stop offset="0%" stopColor="#bbf7d0"/><stop offset="100%" stopColor="#16a34a" stopOpacity="0.7"/></radialGradient>
-                    <radialGradient id="gLowerback" cx="40%" cy="35%"><stop offset="0%" stopColor="#bfdbfe"/><stop offset="100%" stopColor="#2563eb" stopOpacity="0.7"/></radialGradient>
-                    <radialGradient id="gPelvis" cx="40%" cy="35%"><stop offset="0%" stopColor="#99f6e4"/><stop offset="100%" stopColor="#0f766e" stopOpacity="0.8"/></radialGradient>
-                    <radialGradient id="gHeel" cx="40%" cy="35%"><stop offset="0%" stopColor="#e2e8f0"/><stop offset="100%" stopColor="#64748b"/></radialGradient>
-                    <radialGradient id="gSkin" cx="40%" cy="35%"><stop offset="0%" stopColor="#fde8d8"/><stop offset="100%" stopColor="#e8bfa0"/></radialGradient>
-                    <radialGradient id="gMuscleFill" cx="50%" cy="30%"><stop offset="0%" stopColor="#fca5a5" stopOpacity="0.7"/><stop offset="100%" stopColor="#991b1b" stopOpacity="0.5"/></radialGradient>
-                    <filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-                    <filter id="softShadow"><feDropShadow dx="1" dy="2" stdDeviation="3" floodOpacity="0.15"/></filter>
-                    <clipPath id="footClip"><path d={FOOT_PATH}/></clipPath>
+                    <radialGradient id="footSkin" cx="38%" cy="30%">
+                      <stop offset="0%" stopColor="#fde8d8"/>
+                      <stop offset="100%" stopColor="#e8b090"/>
+                    </radialGradient>
+                    <radialGradient id="footMuscle" cx="38%" cy="30%">
+                      <stop offset="0%" stopColor="#ffd0d0"/>
+                      <stop offset="100%" stopColor="#e88090"/>
+                    </radialGradient>
+                    <radialGradient id="footNerve" cx="38%" cy="30%">
+                      <stop offset="0%" stopColor="#d0e8ff"/>
+                      <stop offset="100%" stopColor="#90a8e0"/>
+                    </radialGradient>
+                    <filter id="glow3d">
+                      <feGaussianBlur stdDeviation="3" result="b"/>
+                      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                    <filter id="shadow3d">
+                      <feDropShadow dx="2" dy="4" stdDeviation="6" floodOpacity="0.2"/>
+                    </filter>
                   </defs>
 
-                  {/* Base foot shape — always visible */}
-                  <path
-                    d={FOOT_PATH}
-                    fill={
-                      activeLayer === "skin" ? "url(#gSkin)" :
-                      activeLayer === "organs" ? "rgba(240,255,250,0.65)" :
-                      activeLayer === "muscle" ? "rgba(255,220,220,0.5)" :
-                      activeLayer === "nerve" ? "rgba(220,235,255,0.5)" :
-                      "rgba(255,235,235,0.6)"
-                    }
-                    stroke={activeLayer === "organs" ? "#0f766e" : "#bbb"}
-                    strokeWidth={activeLayer === "organs" ? "1.5" : "1"}
-                    filter="url(#softShadow)"
-                    className="transition-all duration-700"
+                  {/* Foot body */}
+                  <path d={FOOT_PATH}
+                    fill={layer === "muscle" ? "url(#footMuscle)" : layer === "nerve" ? "url(#footNerve)" : "url(#footSkin)"}
+                    stroke={layer === "organs" ? "#0f766e" : layer === "nerve" ? "#3b82f6" : "#c8a090"}
+                    strokeWidth="1.5"
+                    filter="url(#shadow3d)"
+                    opacity={layer === "nerve" ? 0.55 : 0.88}
                   />
 
-                  {/* SKIN layer */}
-                  {activeLayer === "skin" && (
-                    <g clipPath="url(#footClip)">
-                      <path d={FOOT_PATH} fill="url(#gSkin)" opacity="0.9" />
-                      {/* Skin texture lines */}
-                      <path d="M 80,130 Q 120,125 155,130" stroke="#c9956a" strokeWidth="0.7" fill="none" opacity="0.5"/>
-                      <path d="M 75,165 Q 112,160 155,165" stroke="#c9956a" strokeWidth="0.7" fill="none" opacity="0.4"/>
-                      <path d="M 72,200 Q 112,196 152,200" stroke="#c9956a" strokeWidth="0.7" fill="none" opacity="0.4"/>
-                      <path d="M 70,240 Q 112,235 150,240" stroke="#c9956a" strokeWidth="0.7" fill="none" opacity="0.3"/>
-                      {/* Sensitivity zones */}
-                      <ellipse cx="90" cy="55" rx="20" ry="15" fill="#f59e0b" opacity="0.25"/>
-                      <ellipse cx="112" cy="140" rx="45" ry="22" fill="#ef4444" opacity="0.15"/>
-                      <ellipse cx="100" cy="350" rx="22" ry="14" fill="#f97316" opacity="0.2"/>
+                  {/* NERVE layer */}
+                  {layer === "nerve" && (
+                    <g>
+                      <path d={nervePts} stroke="#3b82f6" strokeWidth="3" fill="none" opacity="0.7"
+                        strokeLinecap="round" strokeLinejoin="round"/>
+                      {NERVE_Y.map((yN, i) => (
+                        <circle key={i} cx={FOOT_WIDTH/2} cy={yN * FOOT_HEIGHT}
+                          r={5} fill="#60a5fa" opacity="0.9" filter="url(#glow3d)"/>
+                      ))}
                     </g>
                   )}
 
                   {/* MUSCLE layer */}
-                  {activeLayer === "muscle" && (
-                    <g clipPath="url(#footClip)">
-                      <path d="M 80,130 C 70,145 66,175 68,210 C 70,250 76,290 86,330 L 100,380 L 112,385 L 124,380 L 138,330 C 148,290 154,250 154,210 C 154,175 150,145 140,130 Z" fill="url(#gMuscleFill)" />
-                      <path d="M 80,145 L 68,320" stroke="#ef4444" strokeWidth="1.5" fill="none" opacity="0.6"/>
-                      <path d="M 140,145 L 152,320" stroke="#ef4444" strokeWidth="1.5" fill="none" opacity="0.6"/>
-                      <path d="M 96,125 L 100,385" stroke="#dc2626" strokeWidth="2" fill="none" opacity="0.5"/>
-                      <path d="M 112,120 L 112,420" stroke="#dc2626" strokeWidth="2.5" fill="none" opacity="0.5"/>
-                      <path d="M 128,125 L 124,385" stroke="#dc2626" strokeWidth="2" fill="none" opacity="0.5"/>
-                      {/* Tendon lines */}
-                      <path d="M 72,168 Q 112,162 152,168" stroke="#b91c1c" strokeWidth="1" fill="none" opacity="0.7"/>
-                      <path d="M 68,230 Q 112,224 156,230" stroke="#b91c1c" strokeWidth="1" fill="none" opacity="0.7"/>
-                      <path d="M 66,295 Q 112,290 158,295" stroke="#b91c1c" strokeWidth="1" fill="none" opacity="0.5"/>
+                  {layer === "muscle" && musclePaths.map((mp, i) => (
+                    <g key={i}>
+                      <line x1={mp.x1} y1={mp.y} x2={mp.x2} y2={mp.y}
+                        stroke="#e11d48" strokeWidth="2.5" opacity={0.45 - i * 0.04} strokeLinecap="round"/>
+                      <line x1={mp.x1 + 8} y1={mp.y + 10} x2={mp.x2 - 8} y2={mp.y + 10}
+                        stroke="#f43f5e" strokeWidth="1.5" opacity={0.3} strokeLinecap="round"/>
                     </g>
-                  )}
+                  ))}
 
-                  {/* NERVE layer */}
-                  {activeLayer === "nerve" && (
-                    <g clipPath="url(#footClip)">
-                      <path d="M 112,30 L 112,420" stroke="#3b82f6" strokeWidth="3" fill="none" opacity="0.4"/>
-                      <path d="M 112,80 L 72,95 L 56,145 L 50,230 L 58,310 L 72,380" stroke="#2563eb" strokeWidth="2" fill="none" opacity="0.7"/>
-                      <path d="M 112,80 L 152,95 L 168,145 L 172,230 L 162,310 L 150,380" stroke="#2563eb" strokeWidth="2" fill="none" opacity="0.7"/>
-                      <path d="M 80,130 L 60,165 L 58,210 L 68,260" stroke="#60a5fa" strokeWidth="1.5" fill="none" opacity="0.6"/>
-                      <path d="M 140,130 L 158,165 L 162,210 L 152,260" stroke="#60a5fa" strokeWidth="1.5" fill="none" opacity="0.6"/>
-                      <path d="M 80,280 L 66,320 L 68,365" stroke="#93c5fd" strokeWidth="1.5" fill="none" opacity="0.6"/>
-                      <path d="M 144,280 L 158,320 L 156,365" stroke="#93c5fd" strokeWidth="1.5" fill="none" opacity="0.6"/>
-                      <path d="M 112,200 L 80,240 L 72,290" stroke="#60a5fa" strokeWidth="1" fill="none" opacity="0.5"/>
-                      <path d="M 112,200 L 144,240 L 152,290" stroke="#60a5fa" strokeWidth="1" fill="none" opacity="0.5"/>
-                      {[60, 110, 165, 230, 300, 365].map((y, i) => (
-                        <circle key={i} cx={112} cy={y} r="3.5" fill="#3b82f6" opacity="0.8" filter="url(#glow)"/>
-                      ))}
-                      {[[72, 145], [152, 145], [60, 220], [164, 220], [66, 310], [158, 310]].map(([x, y], i) => (
-                        <circle key={i} cx={x} cy={y} r="2.5" fill="#60a5fa" opacity="0.7"/>
-                      ))}
-                    </g>
-                  )}
-
-                  {/* ORGANS (internal) layer - the spectacular one */}
-                  {activeLayer === "organs" && (
-                    <g>
-                      {ORGANS.map(organ => (
-                        <g
-                          key={organ.id}
-                          onClick={() => setSelectedOrgan(organ)}
-                          className="cursor-pointer"
-                          filter={selectedOrgan?.id === organ.id ? "url(#glow)" : ""}
-                        >
-                          <ellipse
-                            cx={organ.cx} cy={organ.cy} rx={organ.rx} ry={organ.ry}
-                            fill={organ.fill}
-                            stroke={organ.stroke}
-                            strokeWidth={selectedOrgan?.id === organ.id ? "2" : "1"}
-                            opacity={selectedOrgan?.id === organ.id ? "1" : "0.85"}
-                            className="transition-all duration-300"
-                          />
-                          {/* Label connector line */}
-                          {selectedOrgan?.id === organ.id && (
-                            <line
-                              x1={organ.labelSide === "left" ? organ.cx - organ.rx : organ.cx + organ.rx}
-                              y1={organ.cy}
-                              x2={organ.labelSide === "left" ? 10 : 230}
-                              y2={organ.cy}
-                              stroke={organ.stroke}
-                              strokeWidth="0.8"
-                              strokeDasharray="2,2"
-                              opacity="0.7"
-                            />
-                          )}
-                          {/* Organ label inside */}
-                          {organ.rx >= 20 && (
-                            <text x={organ.cx} y={organ.cy + 1.5} textAnchor="middle" fontSize="7" fill="white" fontWeight="600" className="pointer-events-none" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}>
-                              {organ.name}
-                            </text>
-                          )}
-                          {/* Glowing halo for selected */}
-                          {selectedOrgan?.id === organ.id && (
-                            <ellipse cx={organ.cx} cy={organ.cy} rx={organ.rx + 4} ry={organ.ry + 4} fill="none" stroke={organ.stroke} strokeWidth="1.5" opacity="0.5" className="animate-ping" strokeDasharray="3 3"/>
-                          )}
-                        </g>
-                      ))}
-                    </g>
-                  )}
+                  {/* ORGAN blobs — sorted by depth */}
+                  {layer === "organs" && sortedZones.map(z => {
+                    const proj = projectZone(z);
+                    const isSelected = selected?.id === z.id;
+                    const baseR = z.size * 22;
+                    return (
+                      <g key={z.id} style={{ cursor: "pointer" }}
+                        onClick={e => { e.stopPropagation(); setSelected(z); }}>
+                        {/* glow ring for selected */}
+                        {isSelected && (
+                          <ellipse cx={proj.x} cy={proj.y}
+                            rx={baseR * proj.scale + 8} ry={(baseR * 0.75) * proj.scale + 6}
+                            fill="none" stroke={z.glow} strokeWidth="2.5" opacity="0.6"/>
+                        )}
+                        {/* blob shadow */}
+                        <ellipse cx={proj.x + 2} cy={proj.y + 3}
+                          rx={baseR * proj.scale * 0.9} ry={(baseR * 0.75) * proj.scale * 0.9}
+                          fill="rgba(0,0,0,0.12)"/>
+                        {/* blob body */}
+                        <ellipse cx={proj.x} cy={proj.y}
+                          rx={baseR * proj.scale} ry={(baseR * 0.75) * proj.scale}
+                          fill={z.color}
+                          opacity={isSelected ? 1 : 0.88}
+                          filter={isSelected ? "url(#glow3d)" : ""}
+                          stroke={isSelected ? z.glow : "rgba(255,255,255,0.3)"}
+                          strokeWidth={isSelected ? "2" : "0.8"}
+                        />
+                        {/* highlight specular */}
+                        <ellipse cx={proj.x - baseR * proj.scale * 0.28}
+                          cy={proj.y - (baseR * 0.75) * proj.scale * 0.32}
+                          rx={baseR * proj.scale * 0.32} ry={(baseR * 0.75) * proj.scale * 0.22}
+                          fill="rgba(255,255,255,0.38)"/>
+                        {/* label for large blobs */}
+                        {baseR * proj.scale > 16 && (
+                          <text x={proj.x} y={proj.y + 3.5} textAnchor="middle"
+                            fontSize={Math.max(7, baseR * proj.scale * 0.32)}
+                            fill="white" fontWeight="600"
+                            style={{ pointerEvents:"none", textShadow:"0 1px 3px rgba(0,0,0,0.5)" }}>
+                            {z.name}
+                          </text>
+                        )}
+                      </g>
+                    );
+                  })}
 
                   {/* PAIN layer */}
-                  {activeLayer === "pain" && (
-                    <g>
-                      {PAIN_MARKERS.map((m, i) => (
-                        <g key={i}>
-                          <circle cx={m.cx} cy={m.cy} r={m.r + 6} fill={m.color} opacity="0.15" className="animate-pulse"/>
-                          <circle cx={m.cx} cy={m.cy} r={m.r} fill={m.color} opacity="0.75"/>
-                          <text x={m.cx} y={m.cy + 2} textAnchor="middle" fontSize="7" fill="white" fontWeight="700">{m.intensity}</text>
-                        </g>
-                      ))}
-                      <text x="112" y="455" textAnchor="middle" fontSize="8" fill="#94a3b8">לחץ להוספת נקודת כאב</text>
-                    </g>
-                  )}
+                  {layer === "pain" && painZones.map((z, i) => {
+                    const proj = projectZone(z);
+                    return (
+                      <g key={z.id}>
+                        <circle cx={proj.x} cy={proj.y} r={16 * proj.scale}
+                          fill={PAIN_COLOR[i]} opacity="0.2"/>
+                        <circle cx={proj.x} cy={proj.y} r={10 * proj.scale}
+                          fill={PAIN_COLOR[i]} opacity="0.8"/>
+                        <text x={proj.x} y={proj.y + 4} textAnchor="middle"
+                          fontSize="9" fill="white" fontWeight="700" style={{pointerEvents:"none"}}>
+                          {PAIN_INTENSITY[i]}
+                        </text>
+                      </g>
+                    );
+                  })}
 
-                  {/* Spine line (medial edge) — visible in organs + nerve */}
-                  {(activeLayer === "organs" || activeLayer === "nerve") && (
-                    <path d="M 60,128 C 54,165 50,225 52,290 C 54,340 60,380 74,415" stroke={activeLayer === "nerve" ? "#1d4ed8" : "#0f766e"} strokeWidth="1.5" fill="none" opacity="0.4" strokeDasharray="4,2"/>
+                  {/* Medial line */}
+                  {layer !== "pain" && (
+                    <path
+                      d={`M ${FOOT_WIDTH/2 - 8 * cosY},126 C ${FOOT_WIDTH/2 - 12 * cosY},180 ${FOOT_WIDTH/2 - 15*cosY},260 ${FOOT_WIDTH/2 - 10*cosY},380`}
+                      stroke={layer==="nerve"?"#2563eb":"#0f766e"}
+                      strokeWidth="1.5" fill="none" opacity="0.3" strokeDasharray="5,3"
+                    />
                   )}
                 </svg>
-              </motion.div>
-            </AnimatePresence>
+
+                {/* ── BACK FACE: mirrored shell ── */}
+                <svg
+                  viewBox={`0 0 ${FOOT_WIDTH} ${FOOT_HEIGHT}`}
+                  width={FOOT_WIDTH}
+                  height={FOOT_HEIGHT}
+                  style={{
+                    position: "absolute", top: 0, left: 0,
+                    transform: "rotateY(180deg)",
+                    backfaceVisibility: "hidden",
+                    WebkitBackfaceVisibility: "hidden",
+                    filter: "drop-shadow(0 12px 24px rgba(0,0,0,0.18))",
+                  }}
+                >
+                  <path d={FOOT_PATH} fill="#e8b090" stroke="#c8a090" strokeWidth="1.5" opacity="0.8"/>
+                  <path d={FOOT_PATH} fill="none" stroke="#a07060" strokeWidth="0.8" opacity="0.4"/>
+                </svg>
+
+                {/* ── SIDE FACES for thickness illusion ── */}
+                {[-18, 18].map((xOffset, i) => (
+                  <svg key={i}
+                    viewBox={`0 0 ${FOOT_WIDTH} ${FOOT_HEIGHT}`}
+                    width={FOOT_WIDTH}
+                    height={FOOT_HEIGHT}
+                    style={{
+                      position: "absolute", top: 0, left: 0,
+                      transform: `translateZ(${xOffset}px)`,
+                      opacity: 0.25,
+                      pointerEvents: "none",
+                    }}
+                  >
+                    <path d={FOOT_PATH} fill={i===0?"#e8c0a0":"#d0a888"} stroke="none"/>
+                  </svg>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* Drag hint */}
-          <p className="text-xs text-muted-foreground text-center pb-1">גרור לסיבוב המודל · צבט לפתיחה וסגירה</p>
+          {/* Bottom hint */}
+          <div className="absolute bottom-3 left-0 right-0 flex justify-center pointer-events-none">
+            <span className="text-xs text-muted-foreground/80 bg-white/70 backdrop-blur-sm px-3 py-1 rounded-full border border-border/40">
+              {showingBack ? "מבט אחורי" : "מבט קדמי"} · גרור לסיבוב 360° · גלגל לזום
+            </span>
+          </div>
         </div>
 
-        {/* Right organ list / info panel */}
-        {activeLayer === "organs" && (
-          <div className="hidden lg:flex flex-col w-48 shrink-0 gap-3">
-            {/* Selected organ card */}
-            {selectedOrgan && (
-              <motion.div
-                key={selectedOrgan.id}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="rounded-2xl bg-primary text-primary-foreground p-4 text-sm shadow-lg"
-              >
-                <div className="font-semibold text-base mb-2">{selectedOrgan.name}</div>
-                <p className="text-primary-foreground/90 text-xs leading-relaxed">{selectedOrgan.desc}</p>
-                <div className="mt-3 text-xs opacity-70 border-t border-primary-foreground/20 pt-2">
-                  לחץ על אזור במפה לקבלת מידע מפורט
-                </div>
+        {/* Right panel */}
+        <div className="hidden lg:flex flex-col w-52 shrink-0 gap-3">
+          <AnimatePresence mode="wait">
+            {layer === "organs" && selected && (
+              <motion.div key={selected.id}
+                initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-8 }}
+                transition={{ duration: 0.22 }}
+                className="rounded-2xl p-4 text-sm shadow-lg text-white flex-shrink-0"
+                style={{ background: selected.color }}>
+                <div className="font-semibold text-base mb-1">{selected.name}</div>
+                <div className="text-xs opacity-80 mb-2">יסוד: {selected.element}</div>
+                <p className="text-xs leading-relaxed opacity-95">{selected.desc}</p>
               </motion.div>
             )}
+            {layer !== "organs" && (
+              <motion.div key={layer}
+                initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-8 }}
+                transition={{ duration: 0.22 }}
+                className="rounded-2xl bg-card border border-border p-4 text-sm flex-shrink-0">
+                <div className="font-semibold mb-2 text-foreground">
+                  {layer==="nerve"&&"מערכת העצבים"}
+                  {layer==="muscle"&&"מערכת השרירים"}
+                  {layer==="pain"&&"מיפוי כאב"}
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {layer==="nerve"&&"מערכת העצבים עוברת לאורך עמוד השדרה. נקודות הלחץ מפעילות קצות עצבים המשפיעים על האיברים."}
+                  {layer==="muscle"&&"שרירים וגידים של כף הרגל. עבודה על נקודות לחץ מרפה התכווצויות ומשפרת זרימת דם."}
+                  {layer==="pain"&&"נקודות כאב פעילות. הרגישות משקפת את מצב הגוף הרגעי. לחץ להוספת נקודת כאב חדשה."}
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-            {/* Right-side organs list */}
+          {layer === "organs" && (
             <ScrollArea className="flex-1 rounded-2xl bg-card border border-border">
-              <div className="p-2 space-y-1">
-                <p className="text-xs font-semibold text-muted-foreground px-2 py-1">מיפוי איברים</p>
-                {ORGANS.map(o => (
-                  <button
-                    key={o.id}
-                    data-testid={`organ-item-${o.id}`}
-                    onClick={() => setSelectedOrgan(o)}
+              <div className="p-2 space-y-0.5">
+                <p className="text-xs font-semibold text-muted-foreground px-2 py-1.5">מיפוי איברים</p>
+                {ZONES.map(z => (
+                  <button key={z.id} onClick={() => setSelected(z)}
                     className={`w-full text-right px-3 py-2 rounded-lg text-xs transition-colors flex items-center gap-2 ${
-                      selectedOrgan?.id === o.id ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                    }`}
-                  >
-                    <span className="flex-1">{o.name}</span>
-                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: o.stroke }}/>
+                      selected?.id===z.id
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}>
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: z.color }}/>
+                    {z.name}
                   </button>
                 ))}
               </div>
             </ScrollArea>
-          </div>
-        )}
-
-        {/* Info panel for non-organs layers */}
-        {activeLayer !== "organs" && (
-          <div className="hidden lg:flex flex-col w-56 shrink-0 gap-3">
-            <div className="rounded-2xl bg-card border border-border p-5">
-              <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium mb-3 border ${activeLayerData.bg}`}>
-                {activeLayerData.label}
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {activeLayer === "skin" && "שכבת המגע הראשונית. רגישות עורית מצביעה על מתח מקומי, דלקת, או עומס רגשי אצור באזור."}
-                {activeLayer === "muscle" && "שרירים ורצועות תומכים בתנועה. נוקשות, כאב עמום ועוויתות מעידים על מתח פיזי או דפוסי הגנה חוזרים."}
-                {activeLayer === "nerve" && "מסלולי הולכה עצבית. עקצוץ, הירדמות וכאב חד מקרין מצביעים על לחץ או גירוי עצבי."}
-                {activeLayer === "pain" && "אזורים דלקתיים ורגישים שאותרו בטיפול. עוצמת הכאב מדורגת 1-10 עם סיווג לפי סוג וצבע."}
-              </p>
-            </div>
-
-            {/* Layer legend */}
-            <div className="rounded-2xl bg-card border border-border p-4">
-              <p className="text-xs font-semibold text-muted-foreground mb-3">מקרא שכבות</p>
-              <div className="space-y-2">
-                {LAYERS.map(l => (
-                  <div key={l.id} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ background: l.color }}/>
-                    <span className={`text-xs ${l.id === activeLayer ? "font-semibold text-foreground" : "text-muted-foreground"}`}>{l.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Mobile: organ info bottom panel */}
-      {activeLayer === "organs" && selectedOrgan && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="lg:hidden mt-4 rounded-2xl bg-primary text-primary-foreground p-4 shadow-lg"
-        >
-          <div className="font-semibold text-base mb-1">{selectedOrgan.name}</div>
-          <p className="text-primary-foreground/90 text-sm">{selectedOrgan.desc}</p>
-        </motion.div>
-      )}
-
-      {/* Mobile organs scroll */}
-      {activeLayer === "organs" && (
-        <div className="lg:hidden mt-4 overflow-x-auto">
-          <div className="flex gap-2 pb-2">
-            {ORGANS.map(o => (
-              <button
-                key={o.id}
-                onClick={() => setSelectedOrgan(o)}
-                className={`flex-shrink-0 px-3 py-2 rounded-full text-xs border transition-all ${
-                  selectedOrgan?.id === o.id
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-card text-muted-foreground border-border"
-                }`}
-              >
-                {o.name}
-              </button>
-            ))}
-          </div>
+          )}
         </div>
-      )}
-
-      {/* CTA */}
-      <div className="mt-4">
-        <button
-          className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-semibold text-base shadow-md hover:bg-primary/90 transition-colors flex items-center justify-center gap-3"
-          data-testid="start-mapping-btn"
-        >
-          <span>התחל מיפוי</span>
-          <ChevronLeft className="w-5 h-5" />
-        </button>
       </div>
     </div>
   );
