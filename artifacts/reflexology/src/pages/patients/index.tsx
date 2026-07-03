@@ -18,7 +18,7 @@ export default function PatientsList() {
   const { data: patients, isLoading } = useListPatients();
   const [searchTerm, setSearchTerm] = useState("");
 
-  const displayPatients = (patients && patients.length > 0) ? patients : DEMO_PATIENTS;
+  const displayPatients = Array.isArray(patients) && patients.length > 0 ? patients : DEMO_PATIENTS;
   
   const filteredPatients = displayPatients.filter(p => 
     p.name.includes(searchTerm)

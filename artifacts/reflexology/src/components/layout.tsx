@@ -30,9 +30,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
 
   return (
-    <div className="flex min-h-[100dvh] w-full bg-background flex-col md:flex-row rtl">
+    <div className="flex min-h-dvh w-full bg-background flex-col md:flex-row rtl">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-60 flex-col border-l bg-card px-3 py-5 sticky top-0 h-screen shrink-0 overflow-y-auto">
+      <aside className="hidden md:flex w-60 flex-col border-l bg-card px-3 py-5 sticky top-0 h-dvh shrink-0 overflow-y-auto safe-area-top">
         <div className="flex items-center gap-3 px-3 mb-6">
           <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white font-bold text-base shadow-sm">
             ר
@@ -72,23 +72,28 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col pb-20 md:pb-0 overflow-y-auto min-h-0">
-        <div className="max-w-5xl w-full mx-auto p-4 md:p-6">
+      <main className="flex-1 flex flex-col pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 overflow-y-auto min-h-0">
+        <div className="max-w-5xl w-full mx-auto p-4 md:p-6 safe-area-top md:pt-6">
           {children}
         </div>
       </main>
 
       {/* Mobile Bottom Tab Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[60px] bg-card/95 backdrop-blur-md border-t border-border flex items-center justify-around px-2 z-50 safe-area-bottom">
+      <nav
+        aria-label="ניווט ראשי"
+        className="md:hidden fixed bottom-0 left-0 right-0 h-[60px] bg-card/95 backdrop-blur-md border-t border-border flex items-center justify-around px-2 z-50 safe-area-bottom"
+      >
         {BOTTOM_NAV.map((item) => {
           const isActive = location === item.href;
           return (
             <Link
               key={item.href}
               href={item.href}
+              aria-label={item.label}
+              aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex flex-col items-center justify-center w-full h-full gap-1 transition-all relative",
-                isActive ? "text-primary" : "text-muted-foreground"
+                "flex flex-col items-center justify-center w-full h-full gap-1 transition-all relative min-w-11"
+              , isActive ? "text-primary" : "text-muted-foreground"
               )}
             >
               {isActive && (

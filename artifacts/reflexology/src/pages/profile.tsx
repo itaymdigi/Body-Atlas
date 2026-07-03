@@ -31,8 +31,9 @@ export default function Profile() {
         <h1 className="text-2xl font-semibold text-foreground">הפרופיל שלי</h1>
         <button
           data-testid="edit-profile-btn"
+          aria-label={editMode ? "סיום עריכת פרופיל" : "עריכת פרופיל"}
           onClick={() => setEditMode(!editMode)}
-          className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          className="size-11 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
         >
           <Edit2 className="w-4 h-4"/>
         </button>
@@ -49,8 +50,8 @@ export default function Profile() {
             {name.charAt(0)}
           </div>
           {editMode && (
-            <button className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center shadow-md">
-              <Edit2 className="w-3 h-3"/>
+            <button aria-label="שינוי תמונת פרופיל" className="absolute bottom-0 right-0 size-9 rounded-full bg-primary text-white flex items-center justify-center shadow-md">
+              <Edit2 className="w-3.5 h-3.5"/>
             </button>
           )}
         </div>
@@ -147,7 +148,7 @@ export default function Profile() {
       </Card>
 
       {/* Logout */}
-      <Button variant="ghost" className="text-muted-foreground hover:text-destructive" data-testid="logout-btn">
+      <Button variant="ghost" className="h-11 text-muted-foreground hover:text-destructive" data-testid="logout-btn">
         <LogOut className="w-4 h-4 ml-2"/>
         התנתקות
       </Button>

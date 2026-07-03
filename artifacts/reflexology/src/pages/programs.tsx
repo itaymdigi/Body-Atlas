@@ -173,7 +173,12 @@ export default function Programs() {
               התחל תכנית
             </Button>
           </Link>
-          <Button variant="outline" className="h-14 px-4 rounded-2xl" onClick={() => setSavedIds(s => { const n = new Set(s); n.has(activeProgram.id) ? n.delete(activeProgram.id) : n.add(activeProgram.id); return n; })}>
+          <Button
+            variant="outline"
+            className="h-14 px-4 rounded-2xl"
+            aria-label={savedIds.has(activeProgram.id) ? "הסרה מהשמורים" : "שמירת תכנית"}
+            onClick={() => setSavedIds(s => { const n = new Set(s); n.has(activeProgram.id) ? n.delete(activeProgram.id) : n.add(activeProgram.id); return n; })}
+          >
             <Bookmark className={`w-5 h-5 ${savedIds.has(activeProgram.id) ? "fill-primary text-primary" : ""}`}/>
           </Button>
         </div>
@@ -251,7 +256,8 @@ export default function Programs() {
                     </div>
                     <button
                       onClick={e => { e.stopPropagation(); setSavedIds(s => { const n = new Set(s); n.has(prog.id) ? n.delete(prog.id) : n.add(prog.id); return n; }); }}
-                      className="p-1 text-muted-foreground hover:text-primary transition-colors"
+                      aria-label={savedIds.has(prog.id) ? "הסרה מהשמורים" : "שמירת תכנית"}
+                      className="size-9 shrink-0 -m-1.5 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
                     >
                       <Bookmark className={`w-4 h-4 ${savedIds.has(prog.id) ? "fill-primary text-primary" : ""}`}/>
                     </button>

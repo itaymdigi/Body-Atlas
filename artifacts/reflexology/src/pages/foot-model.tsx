@@ -462,7 +462,8 @@ export default function FootModel() {
       <div className="flex gap-2 overflow-x-auto pb-2 mb-4 flex-shrink-0 scrollbar-hide">
         {LAYERS.map(l => (
           <button key={l.id} onClick={() => setLayer(l.id)}
-            className={`flex-shrink-0 px-4 py-2 rounded-full border text-sm font-medium transition-all ${
+            aria-pressed={layer === l.id}
+            className={`flex-shrink-0 min-h-11 px-4 py-2.5 rounded-full border text-sm font-medium transition-all ${
               layer === l.id
                 ? "bg-primary text-primary-foreground border-primary shadow-sm"
                 : "bg-card text-muted-foreground border-border hover:border-primary/40"
@@ -474,14 +475,15 @@ export default function FootModel() {
       <div className="flex gap-2 mb-4 flex-shrink-0">
         {(["right","left"] as Foot[]).map(f => (
           <button key={f} onClick={() => setFoot(f)}
-            className={`px-5 py-2 rounded-full text-sm font-medium border transition-all ${
+            aria-pressed={foot === f}
+            className={`min-h-11 px-5 py-2.5 rounded-full text-sm font-medium border transition-all ${
               foot === f ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:border-primary/40"
             }`}>{f === "right" ? "ימין" : "שמאל"}</button>
         ))}
       </div>
 
       {/* Main */}
-      <div className="flex gap-4 flex-1 min-h-0">
+      <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
 
         {/* LEFT: label column for left-side organs */}
         {layer === "organs" && (
@@ -512,17 +514,23 @@ export default function FootModel() {
           onPointerLeave={onPointerUp}
         >
           {/* Controls */}
-          <div className="absolute top-3 right-3 z-20 flex flex-col gap-1.5">
-            <button onClick={() => setZoom(z => Math.min(z + 0.15, 2))}
-              className="w-8 h-8 rounded-full bg-white/90 border border-border shadow-sm flex items-center justify-center hover:bg-white">
+          <div className="absolute top-3 right-3 z-20 flex flex-col gap-2">
+            <button
+              aria-label="הגדלה"
+              onClick={() => setZoom(z => Math.min(z + 0.15, 2))}
+              className="size-11 rounded-full bg-white/90 border border-border shadow-sm flex items-center justify-center hover:bg-white active:scale-95 transition-transform">
               <ZoomIn className="w-4 h-4 text-muted-foreground"/>
             </button>
-            <button onClick={() => setZoom(z => Math.max(z - 0.15, 0.5))}
-              className="w-8 h-8 rounded-full bg-white/90 border border-border shadow-sm flex items-center justify-center hover:bg-white">
+            <button
+              aria-label="הקטנה"
+              onClick={() => setZoom(z => Math.max(z - 0.15, 0.5))}
+              className="size-11 rounded-full bg-white/90 border border-border shadow-sm flex items-center justify-center hover:bg-white active:scale-95 transition-transform">
               <ZoomOut className="w-4 h-4 text-muted-foreground"/>
             </button>
-            <button onClick={() => { setRotY(0); setZoom(1); velX.current = 0; }}
-              className="w-8 h-8 rounded-full bg-white/90 border border-border shadow-sm flex items-center justify-center hover:bg-white">
+            <button
+              aria-label="איפוס תצוגה"
+              onClick={() => { setRotY(0); setZoom(1); velX.current = 0; }}
+              className="size-11 rounded-full bg-white/90 border border-border shadow-sm flex items-center justify-center hover:bg-white active:scale-95 transition-transform">
               <RotateCcw className="w-4 h-4 text-muted-foreground"/>
             </button>
           </div>
@@ -571,8 +579,8 @@ export default function FootModel() {
           </div>
         </div>
 
-        {/* RIGHT: info panel */}
-        <div className="hidden lg:flex flex-col w-52 shrink-0 gap-3">
+        {/* RIGHT: info panel (stacks below the foot on mobile, side column on desktop) */}
+        <div className="flex flex-col w-full lg:w-52 shrink-0 gap-3 min-h-0">
           <AnimatePresence mode="wait">
             {selectedZone && (
               <motion.div key={selectedZone.id}
@@ -588,11 +596,12 @@ export default function FootModel() {
           </AnimatePresence>
 
           <div className="text-xs font-semibold text-muted-foreground px-1 mt-1">מיפוי איברים</div>
-          <ScrollArea className="flex-1 rounded-2xl bg-card border border-border">
+          <ScrollArea className="lg:flex-1 h-40 lg:h-auto rounded-2xl bg-card border border-border">
             <div className="p-2 space-y-0.5">
               {ZONES.map(z => (
                 <button key={z.id} onClick={() => setSelected(z.id)}
-                  className={`w-full text-right px-3 py-2 rounded-lg text-xs transition-colors flex items-center gap-2 ${
+                  aria-pressed={selected === z.id}
+                  className={`w-full text-right px-3 py-2.5 min-h-11 rounded-lg text-xs transition-colors flex items-center gap-2 ${
                     selected===z.id ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   }`}>
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: z.color }}/>

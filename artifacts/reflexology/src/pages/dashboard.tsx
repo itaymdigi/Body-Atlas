@@ -25,8 +25,8 @@ export default function Dashboard() {
   const { data: stats } = useGetDashboardStats();
   const { data: activities } = useGetRecentActivity();
 
-  const displayStats = stats ?? DEMO_STATS;
-  const displayActivities = (activities && activities.length > 0) ? activities : DEMO_ACTIVITIES;
+  const displayStats = stats && typeof stats === "object" && "totalPatients" in stats ? stats : DEMO_STATS;
+  const displayActivities = Array.isArray(activities) && activities.length > 0 ? activities : DEMO_ACTIVITIES;
 
   const statItems = [
     { label: "מטופלים", value: displayStats.totalPatients, icon: UserPlus, color: "text-blue-600", bg: "bg-blue-50" },

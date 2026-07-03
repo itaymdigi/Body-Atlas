@@ -54,7 +54,7 @@ export default function AIGuide() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto h-[calc(100vh-10rem)] flex flex-col">
+    <div className="max-w-2xl mx-auto h-[calc(100dvh-13rem)] md:h-[calc(100dvh-9rem)] flex flex-col">
       <header className="mb-6 text-center shrink-0">
         <h1 className="text-3xl font-light text-primary">מדריך גוף</h1>
         <p className="text-muted-foreground mt-1">חקירה משותפת של תחושות ודפוסים פיזיים</p>
@@ -102,7 +102,7 @@ export default function AIGuide() {
               placeholder="כתוב כאן תחושה או שאלה..." 
               className="rounded-full bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary"
             />
-            <Button type="submit" size="icon" className="rounded-full shrink-0">
+            <Button type="submit" size="icon" aria-label="שליחת הודעה" className="rounded-full shrink-0 size-11">
               <Send className="w-4 h-4 rtl:-scale-x-100" />
             </Button>
           </form>

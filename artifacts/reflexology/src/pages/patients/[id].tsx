@@ -36,10 +36,10 @@ export default function PatientDetail() {
   const { data: sessionsData } = useListSessions({ patientId: id }, { query: { enabled: !!id && !isNaN(id) } });
   const { data: trendsData } = useGetPainTrends({ patientId: id, period: "month" }, { query: { enabled: !!id && !isNaN(id) } });
 
-  const patient = patientData || DEMO_PATIENT;
-  const sessions = sessionsData?.length ? sessionsData : DEMO_SESSIONS;
-  const records = recordsData?.length ? recordsData : DEMO_PAIN_RECORDS;
-  const trends = trendsData?.length ? trendsData : DEMO_TRENDS;
+  const patient = patientData && typeof patientData === "object" && "name" in patientData ? patientData : DEMO_PATIENT;
+  const sessions = Array.isArray(sessionsData) && sessionsData.length > 0 ? sessionsData : DEMO_SESSIONS;
+  const records = Array.isArray(recordsData) && recordsData.length > 0 ? recordsData : DEMO_PAIN_RECORDS;
+  const trends = Array.isArray(trendsData) && trendsData.length > 0 ? trendsData : DEMO_TRENDS;
 
   return (
     <div className="space-y-6">
@@ -81,7 +81,7 @@ export default function PatientDetail() {
       </Card>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="w-full justify-start border-b rounded-none h-12 bg-transparent space-x-reverse space-x-6 px-2">
+        <TabsList className="w-full justify-start overflow-x-auto border-b rounded-none h-12 bg-transparent space-x-reverse space-x-6 px-2">
           <TabsTrigger value="overview" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-3">מבט על</TabsTrigger>
           <TabsTrigger value="pain" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-3">תיעוד כאב</TabsTrigger>
           <TabsTrigger value="history" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-3">היסטוריית טיפולים</TabsTrigger>
