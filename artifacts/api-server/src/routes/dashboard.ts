@@ -47,12 +47,12 @@ router.get("/dashboard/recent-activity", async (_req, res): Promise<void> => {
   const patientsList = await db.select({ id: patientsTable.id, name: patientsTable.name }).from(patientsTable);
   const patientMap = new Map(patientsList.map(p => [p.id, p.name]));
 
-  const activity = sessions.map((s, i) => ({
+  const activity = sessions.map((s) => ({
     id: s.id,
     type: "session",
     patientName: patientMap.get(s.patientId) ?? "מטופל לא ידוע",
     description: s.notes.substring(0, 80),
-    timestamp: s.createdAt.toISOString(),
+    timestamp: s.createdAt instanceof Date ? s.createdAt.toISOString() : String(s.createdAt),
   }));
 
   res.json(GetRecentActivityResponse.parse(activity));
@@ -73,7 +73,7 @@ router.get("/dashboard/pain-trends", async (req, res): Promise<void> => {
   const grouped: Record<string, { totalPain: number; count: number; sessions: number }> = {};
   for (const s of allSessions) {
     if (query.data.patientId && s.patientId !== query.data.patientId) continue;
-    const key = s.date.substring(0, 10);
+    const key = String(s.date).substring(0, 10);
     if (!grouped[key]) grouped[key] = { totalPain: 0, count: 0, sessions: 0 };
     if (s.painBefore != null) {
       grouped[key].totalPain += s.painBefore;

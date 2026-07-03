@@ -9,6 +9,7 @@ import {
   GetTreatmentParams,
   GetTreatmentResponse,
 } from "@workspace/api-zod";
+import { serializeDates, serializeDatesArray } from "../lib/serialize";
 
 const router: IRouter = Router();
 
@@ -24,7 +25,7 @@ router.get("/treatments", async (req, res): Promise<void> => {
   } else {
     treatments = await db.select().from(treatmentsTable).orderBy(treatmentsTable.createdAt);
   }
-  res.json(ListTreatmentsResponse.parse(treatments));
+  res.json(ListTreatmentsResponse.parse(serializeDatesArray(treatments)));
 });
 
 router.post("/treatments", async (req, res): Promise<void> => {
@@ -34,7 +35,7 @@ router.post("/treatments", async (req, res): Promise<void> => {
     return;
   }
   const [treatment] = await db.insert(treatmentsTable).values(parsed.data).returning();
-  res.status(201).json(CreateTreatmentResponse.parse(treatment));
+  res.status(201).json(CreateTreatmentResponse.parse(serializeDates(treatment)));
 });
 
 router.get("/treatments/:id", async (req, res): Promise<void> => {
@@ -48,7 +49,7 @@ router.get("/treatments/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Treatment not found" });
     return;
   }
-  res.json(GetTreatmentResponse.parse(treatment));
+  res.json(GetTreatmentResponse.parse(serializeDates(treatment)));
 });
 
 export default router;

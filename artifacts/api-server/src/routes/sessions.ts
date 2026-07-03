@@ -7,6 +7,7 @@ import {
   CreateSessionBody,
   CreateSessionResponse,
 } from "@workspace/api-zod";
+import { serializeDates, serializeDatesArray } from "../lib/serialize";
 
 const router: IRouter = Router();
 
@@ -22,7 +23,7 @@ router.get("/sessions", async (req, res): Promise<void> => {
   } else {
     sessions = await db.select().from(sessionsTable).orderBy(sessionsTable.createdAt);
   }
-  res.json(ListSessionsResponse.parse(sessions));
+  res.json(ListSessionsResponse.parse(serializeDatesArray(sessions)));
 });
 
 router.post("/sessions", async (req, res): Promise<void> => {
@@ -32,7 +33,7 @@ router.post("/sessions", async (req, res): Promise<void> => {
     return;
   }
   const [session] = await db.insert(sessionsTable).values(parsed.data).returning();
-  res.status(201).json(CreateSessionResponse.parse(session));
+  res.status(201).json(CreateSessionResponse.parse(serializeDates(session)));
 });
 
 export default router;

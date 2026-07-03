@@ -9,6 +9,7 @@ import {
   GetPainRecordParams,
   GetPainRecordResponse,
 } from "@workspace/api-zod";
+import { serializeDates, serializeDatesArray } from "../lib/serialize";
 
 const router: IRouter = Router();
 
@@ -24,7 +25,7 @@ router.get("/pain-records", async (req, res): Promise<void> => {
   } else {
     records = await db.select().from(painRecordsTable).orderBy(painRecordsTable.createdAt);
   }
-  res.json(ListPainRecordsResponse.parse(records));
+  res.json(ListPainRecordsResponse.parse(serializeDatesArray(records)));
 });
 
 router.post("/pain-records", async (req, res): Promise<void> => {
@@ -34,7 +35,7 @@ router.post("/pain-records", async (req, res): Promise<void> => {
     return;
   }
   const [record] = await db.insert(painRecordsTable).values(parsed.data).returning();
-  res.status(201).json(CreatePainRecordResponse.parse(record));
+  res.status(201).json(CreatePainRecordResponse.parse(serializeDates(record)));
 });
 
 router.get("/pain-records/:id", async (req, res): Promise<void> => {
@@ -48,7 +49,7 @@ router.get("/pain-records/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Pain record not found" });
     return;
   }
-  res.json(GetPainRecordResponse.parse(record));
+  res.json(GetPainRecordResponse.parse(serializeDates(record)));
 });
 
 export default router;

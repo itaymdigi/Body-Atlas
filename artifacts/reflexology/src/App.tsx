@@ -19,6 +19,8 @@ import AIGuide from "@/pages/ai-guide";
 import Pause from "@/pages/pause";
 import Progress from "@/pages/progress";
 import Disclaimer from "@/pages/disclaimer";
+import Programs from "@/pages/programs";
+import Profile from "@/pages/profile";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +41,8 @@ function Router() {
         <Route path="/pause" component={Pause} />
         <Route path="/progress" component={Progress} />
         <Route path="/disclaimer" component={Disclaimer} />
+        <Route path="/programs" component={Programs} />
+        <Route path="/profile" component={Profile} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

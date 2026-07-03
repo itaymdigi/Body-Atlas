@@ -1,15 +1,29 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { Home, Users, Search, Activity, FileText, Info, BarChart2 } from "lucide-react";
+import { Home, Users, Footprints, Pause, BarChart2, Info, MessageCircle, Layers, BookOpen, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const NAV_ITEMS = [
+const BOTTOM_NAV = [
+  { href: "/", label: "בית", icon: Home },
+  { href: "/ai-guide", label: "AI מדריך", icon: MessageCircle },
+  { href: "/programs", label: "תכניות", icon: BookOpen },
+  { href: "/pause", label: "עצירה", icon: Pause },
+  { href: "/profile", label: "פרופיל", icon: User },
+];
+
+const SIDEBAR_NAV = [
   { href: "/", label: "בית", icon: Home },
   { href: "/patients", label: "מטופלים", icon: Users },
-  { href: "/vital-zones", label: "אזורים", icon: Search },
-  { href: "/pause", label: "עצירה", icon: Activity },
+  { href: "/foot-model", label: "מפת כף הרגל", icon: Footprints },
+  { href: "/vital-zones", label: "אזורים חיוניים", icon: Footprints },
+  { href: "/elements", label: "4 היסודות", icon: Layers },
+  { href: "/layers", label: "שכבות", icon: Layers },
+  { href: "/programs", label: "תכניות", icon: BookOpen },
+  { href: "/ai-guide", label: "AI מדריך", icon: MessageCircle },
+  { href: "/pause", label: "עצירה עכשיו", icon: Pause },
   { href: "/progress", label: "דוחות", icon: BarChart2 },
-  { href: "/disclaimer", label: "מידע", icon: Info },
+  { href: "/profile", label: "פרופיל", icon: User },
+  { href: "/disclaimer", label: "חשוב לדעת", icon: Info },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -18,64 +32,69 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-[100dvh] w-full bg-background flex-col md:flex-row rtl">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 flex-col border-l bg-card px-4 py-6 sticky top-0 h-screen shrink-0">
-        <div className="flex items-center gap-3 px-2 mb-8">
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold">
+      <aside className="hidden md:flex w-60 flex-col border-l bg-card px-3 py-5 sticky top-0 h-screen shrink-0 overflow-y-auto">
+        <div className="flex items-center gap-3 px-3 mb-6">
+          <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white font-bold text-base shadow-sm">
             ר
           </div>
-          <span className="text-lg font-bold text-foreground">רפלקסולוגיה</span>
+          <div>
+            <div className="text-sm font-bold text-foreground">רפלקסולוגיה</div>
+            <div className="text-[10px] text-muted-foreground">מרחב למודעות</div>
+          </div>
         </div>
-        
-        <nav className="flex flex-col gap-2 flex-1">
-          {NAV_ITEMS.map((item) => {
-            const isActive = location === item.href;
+
+        <nav className="flex flex-col gap-1 flex-1">
+          {SIDEBAR_NAV.map((item) => {
+            const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
             return (
-              <Link 
-                key={item.href} 
+              <Link
+                key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-sm font-medium",
-                  isActive 
-                    ? "bg-primary/10 text-primary" 
+                  "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium",
+                  isActive
+                    ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
-                <item.icon className="w-5 h-5" />
+                <item.icon className="w-4 h-4 flex-shrink-0" />
                 <span>{item.label}</span>
+                {isActive && <div className="mr-auto w-1.5 h-1.5 rounded-full bg-primary"/>}
               </Link>
             );
           })}
         </nav>
-        
-        <div className="mt-auto">
-          <div className="px-4 py-4 rounded-xl bg-primary/5 text-center text-sm text-primary">
-            <span className="block font-medium">מרחב למודעות</span>
-            <span className="block text-xs opacity-80 mt-1">גרסת בטא</span>
-          </div>
+
+        <div className="mt-4 px-3 py-3 rounded-2xl bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-100">
+          <div className="text-xs font-semibold text-teal-700">גרסת בטא</div>
+          <div className="text-[10px] text-teal-600/80 mt-0.5">הכנות האפליקציה לשחרור</div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col pb-20 md:pb-0 overflow-y-auto">
-        <div className="max-w-5xl w-full mx-auto p-4 md:p-8">
+      <main className="flex-1 flex flex-col pb-20 md:pb-0 overflow-y-auto min-h-0">
+        <div className="max-w-5xl w-full mx-auto p-4 md:p-6">
           {children}
         </div>
       </main>
 
       {/* Mobile Bottom Tab Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-card border-t flex items-center justify-around px-2 z-50">
-        {NAV_ITEMS.slice(0, 5).map((item) => {
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[60px] bg-card/95 backdrop-blur-md border-t border-border flex items-center justify-around px-2 z-50 safe-area-bottom">
+        {BOTTOM_NAV.map((item) => {
           const isActive = location === item.href;
           return (
-            <Link 
-              key={item.href} 
+            <Link
+              key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center w-full h-full gap-1 transition-colors",
+                "flex flex-col items-center justify-center w-full h-full gap-1 transition-all relative",
                 isActive ? "text-primary" : "text-muted-foreground"
               )}
             >
-              <item.icon className="w-5 h-5" />
+              {isActive && (
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-primary"/>
+              )}
+              <item.icon className={cn("w-5 h-5 transition-transform", isActive && "scale-110")} />
               <span className="text-[10px] font-medium">{item.label}</span>
             </Link>
           );

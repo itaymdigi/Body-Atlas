@@ -11,12 +11,13 @@ import {
   UpdatePatientBody,
   UpdatePatientResponse,
 } from "@workspace/api-zod";
+import { serializeDates, serializeDatesArray } from "../lib/serialize";
 
 const router: IRouter = Router();
 
 router.get("/patients", async (_req, res): Promise<void> => {
   const patients = await db.select().from(patientsTable).orderBy(patientsTable.createdAt);
-  res.json(ListPatientsResponse.parse(patients));
+  res.json(ListPatientsResponse.parse(serializeDatesArray(patients)));
 });
 
 router.post("/patients", async (req, res): Promise<void> => {
@@ -26,7 +27,7 @@ router.post("/patients", async (req, res): Promise<void> => {
     return;
   }
   const [patient] = await db.insert(patientsTable).values(parsed.data).returning();
-  res.status(201).json(CreatePatientResponse.parse(patient));
+  res.status(201).json(CreatePatientResponse.parse(serializeDates(patient)));
 });
 
 router.get("/patients/:id", async (req, res): Promise<void> => {
@@ -40,7 +41,7 @@ router.get("/patients/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Patient not found" });
     return;
   }
-  res.json(GetPatientResponse.parse(patient));
+  res.json(GetPatientResponse.parse(serializeDates(patient)));
 });
 
 router.patch("/patients/:id", async (req, res): Promise<void> => {
@@ -59,7 +60,7 @@ router.patch("/patients/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Patient not found" });
     return;
   }
-  res.json(UpdatePatientResponse.parse(patient));
+  res.json(UpdatePatientResponse.parse(serializeDates(patient)));
 });
 
 export default router;

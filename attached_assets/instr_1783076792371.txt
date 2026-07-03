@@ -1,0 +1,125 @@
+Improve the existing app using the attached image as the main visual and feature reference. The goal is a premium, fully Hebrew, RTL, accessible, highly interactive reflexology app, not a static mockup.
+
+Build the screens and interactions shown in the image as a live app:
+
+1. Home screen in Hebrew:
+Title: "איך הגוף שלך היום?"
+Cards: quick body scan, feet map, breathing exercise, pain or discomfort, patterns journal, pause now.
+Design: white/off-white background, rounded cards, teal/green primary color, pastel icons, soft shadows, bottom navigation.
+
+2. Interactive foot map:
+Create a colorful right/left foot reflexology map.
+Include organ/system labels such as: head/brain, sinuses, lungs, heart, diaphragm, stomach, liver, pancreas, kidneys, intestines, lower back, pelvis, neck, shoulders, heel.
+Clicking a zone should open a Hebrew info panel with explanation and suggested focus.
+Allow switching between right foot and left foot.
+
+3. Interactive 3D foot model:
+This is the most important part.
+Create a convincing 3D-like interactive foot model with:
+- rotate / drag
+- zoom in / zoom out
+- clickable hotspots
+- hover highlight
+- layer switching
+
+Required layers:
+- Skin
+- Muscle
+- Nerves
+- Internal organs
+- Pain
+
+When selecting each layer, the foot visualization should change.
+When selecting "Internal organs", show reflexology organ mapping on the foot with clear Hebrew labels.
+When selecting "Pain", show pain markers on the foot.
+
+4. Layers screen:
+Show stacked semi-transparent anatomical layers of the foot.
+Include Hebrew explanations for each layer:
+Skin, muscle, nerves, internal organs, pain.
+
+5. AI body guide chat:
+Hebrew chat UI with suggestions:
+"איפה אתה מרגיש את זה בגוף?"
+"בוא נעשה עצירה של 3 דקות"
+"איזה דפוס חוזר הופיע היום?"
+"איזור בכף הרגל רגיש לי"
+The assistant should guide body awareness, breathing and pausing, not medical diagnosis.
+
+6. Breathing / pause exercise screen:
+Large circular timer, 3–4 minutes.
+Steps in Hebrew:
+עצור תנועה
+שים לב לכפות הרגליים
+שים לב לנשימה
+מצא אזור מאומץ
+רכך אזור אחד
+חזור לגוף
+
+7. Patient pain documentation:
+Create a patient area with:
+- patient profile card
+- name
+- age
+- number of treatments
+- average pain score
+- improvement percentage
+- last treatment date
+
+Pain documentation must include:
+- front/back body map
+- foot pain map
+- pain markers
+- pain intensity 0–10
+- side
+- body area
+- pain type
+- sensitivity level
+- pressure depth
+- notes
+- recommendation
+- follow-up date
+- treatment history
+- progress trend chart
+
+Pain types:
+sharp, dull, pressure, burning, tingling, sensitivity, stiffness.
+
+8. Treatment plan screen:
+Allow choosing:
+- reflexology zones
+- four elements focus
+- treatment goals
+- session duration
+- frequency
+- follow-up date
+
+Goals:
+general tension reduction, body awareness, relaxation support, sleep quality, recurring pain pattern identification, breathing / diaphragm awareness.
+
+9. Programs screen:
+Program cards similar to the image:
+stress relief, chronic pain awareness, better sleep, energy balance.
+
+10. Profile and disclaimer:
+Create a Hebrew profile screen and “important to know” screen.
+Add a clear disclaimer:
+The app is for body-awareness learning, reflexology self-care, documentation and general relaxation. It is not medical diagnosis and does not replace a doctor, psychologist, physiotherapist or licensed professional. For acute pain, new symptoms, pregnancy, diabetes, vascular conditions, severe mental distress or complex medical conditions, consult a qualified professional.
+
+Design requirements:
+- Full Hebrew RTL
+- Mobile-first
+- Responsive
+- Accessible
+- Large readable text
+- Large touch targets
+- Rounded cards
+- Soft shadows
+- Glass / subtle neumorphic feel
+- White/off-white background
+- Teal/green primary color
+- Pastel accent colors
+- Polished wellness / medical-tech look
+
+Important:
+Use the attached image as the primary design and feature reference. Recreate the same product feeling, screen structure, visual hierarchy, colors and interactions, but build it as a real working interactive app, not as a static image.
